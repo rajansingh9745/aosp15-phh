@@ -26,7 +26,8 @@ for part in a ab;do
 		optional_base=""
 				if [ "$apps" == "gapps" ];then
 					apps_suffix="g"
-					apps_script='$(call inherit-product, device/phh/treble/gapps.mk)'
+     					[[ "$arch" == "a64" ]] && base="arm" || base="arm64"
+    					apps_script="\$(call inherit-product, vendor/gapps/$base/$base-vendor.mk)"
 					apps_name="with GApps"
 				fi
 				if [ "$apps" == "gapps-go" ];then
