@@ -83,7 +83,6 @@ fixSPL() {
     [ -z "$Arelease" ] && Arelease="$(getSPL "$img" android)"
     spl="$(getSPL "$img" spl)"
     setprop ro.keymaster.xxx.release "${Arelease}"
-    setprop ro.keymaster.xxx.security_patch "$spl"
     if [ -z "$Arelease" ] || [ -z "$spl" ];then
         return 0
     fi
