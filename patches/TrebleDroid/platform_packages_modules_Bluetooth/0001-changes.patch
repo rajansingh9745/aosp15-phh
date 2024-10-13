@@ -1,0 +1,395 @@
+diff --git a/android/BluetoothLegacyMigration/Android.bp b/android/BluetoothLegacyMigration/Android.bp
+index 786264e..b755fa0 100644
+--- a/android/BluetoothLegacyMigration/Android.bp
++++ b/android/BluetoothLegacyMigration/Android.bp
+@@ -9,6 +9,6 @@ android_app {
+     srcs: [ "BluetoothLegacyMigration.kt" ],
+ 
+     // Must match Bluetooth.apk certificate because of sharedUserId
+-    certificate: "bluetooth",
++    certificate: ":com.android.bluetooth.certificate",
+     platform_apis: true,
+ }
+diff --git a/android/app/Android.bp b/android/app/Android.bp
+index b11a7ec..07a7cdd 100644
+--- a/android/app/Android.bp
++++ b/android/app/Android.bp
+@@ -232,7 +232,7 @@ android_app {
+         "--custom-package",
+         "com.android.bluetooth",
+     ],
+-    certificate: "bluetooth",
++    certificate: ":com.android.bluetooth.certificate",
+ 
+     jarjar_rules: ":bluetooth-jarjar-rules",
+     privapp_allowlist: ":privapp_allowlist_com.android.bluetooth.xml",
+@@ -393,3 +393,8 @@ genrule {
+         " --minApiLevel 34",
+     out: ["com/android/bluetooth/BtRestrictedStatsLog.java"],
+ }
++
++android_app_certificate {
++    name: "com.android.bluetooth.certificate",
++    certificate: "certs/com.android.bluetooth",
++}
+diff --git a/android/app/src/com/android/bluetooth/btservice/BondStateMachine.java b/android/app/src/com/android/bluetooth/btservice/BondStateMachine.java
+index 34b2b63..2be17a0 100644
+--- a/android/app/src/com/android/bluetooth/btservice/BondStateMachine.java
++++ b/android/app/src/com/android/bluetooth/btservice/BondStateMachine.java
+@@ -32,7 +32,6 @@ import android.os.Bundle;
+ import android.os.Message;
+ import android.os.UserHandle;
+ import android.util.Log;
+-import android.util.Pair;
+ 
+ import com.android.bluetooth.BluetoothStatsLog;
+ import com.android.bluetooth.Utils;
+@@ -53,7 +52,6 @@ import com.android.internal.util.StateMachine;
+ 
+ import java.util.ArrayList;
+ import java.util.HashSet;
+-import java.util.List;
+ import java.util.Objects;
+ import java.util.Optional;
+ import java.util.Set;
+@@ -487,37 +485,8 @@ final class BondStateMachine extends StateMachine {
+         return false;
+     }
+ 
+-    // Defining these properly would break current api
+-    private static int PERIPHERAL_GAMEPAD = BluetoothClass.Device.Major.PERIPHERAL | 0x08;
+-    private static int PERIPHERAL_REMOTE = BluetoothClass.Device.Major.PERIPHERAL | 0x0C;
+-
+-    private static List<Pair<String, Integer>> accConfirmSkip = new ArrayList<>();
+-
+-    static {
+-        // Jarvis, SHIELD Remote 2015
+-        accConfirmSkip.add(new Pair<>("SHIELD Remote", PERIPHERAL_REMOTE));
+-        // Thunderstrike, SHIELD Controller 2017
+-        accConfirmSkip.add(new Pair<>("NVIDIA Controller v01.04", PERIPHERAL_GAMEPAD));
+-    };
+-
+-    private boolean isSkipConfirmationAccessory(BluetoothDevice device) {
+-        for (Pair<String, Integer> entry : accConfirmSkip) {
+-            if (device.getName().equals(entry.first)
+-                    && device.getBluetoothClass().getDeviceClass() == entry.second) {
+-                return true;
+-            }
+-        }
+-
+-        return false;
+-    }
+-
+     private void sendDisplayPinIntent(byte[] address, Optional<Integer> maybePin, int variant) {
+         BluetoothDevice device = mRemoteDevices.getDevice(address);
+-        if (device != null && device.isBondingInitiatedLocally()
+-                && isSkipConfirmationAccessory(device)) {
+-            device.setPairingConfirmation(true);
+-            return;
+-        }
+         Intent intent = new Intent(BluetoothDevice.ACTION_PAIRING_REQUEST);
+         intent.putExtra(BluetoothDevice.EXTRA_DEVICE, device);
+         maybePin.ifPresent(pin -> intent.putExtra(BluetoothDevice.EXTRA_PAIRING_KEY, pin));
+diff --git a/service/Android.bp b/service/Android.bp
+index 3b8082d..21aa8d4 100644
+--- a/service/Android.bp
++++ b/service/Android.bp
+@@ -104,7 +104,6 @@ java_library {
+         "bluetooth_flags_java_lib",
+         "modules-utils-build_system",
+         "modules-utils-shell-command-handler",
+-        "modules-utils-handlerexecutor",
+     ],
+ 
+     lint: {
+diff --git a/service/src/AdapterBinder.kt b/service/src/AdapterBinder.kt
+index e93e748..ae36274 100644
+--- a/service/src/AdapterBinder.kt
++++ b/service/src/AdapterBinder.kt
+@@ -93,9 +93,4 @@ class AdapterBinder(rawBinder: IBinder) {
+     fun killBluetoothProcess() {
+         adapterBinder.killBluetoothProcess()
+     }
+-
+-    @Throws(RemoteException::class)
+-    fun getConnectionState(): Int {
+-        return adapterBinder.getAdapterConnectionState();
+-    }
+ }
+diff --git a/service/src/com/android/server/bluetooth/BluetoothManagerService.java b/service/src/com/android/server/bluetooth/BluetoothManagerService.java
+index 3494d58..134463b 100644
+--- a/service/src/com/android/server/bluetooth/BluetoothManagerService.java
++++ b/service/src/com/android/server/bluetooth/BluetoothManagerService.java
+@@ -42,8 +42,6 @@ import static java.util.Objects.requireNonNull;
+ 
+ import android.annotation.NonNull;
+ import android.app.ActivityManager;
+-import android.app.AlarmManager;
+-import android.app.AlarmManager.OnAlarmListener;
+ import android.app.BroadcastOptions;
+ import android.bluetooth.BluetoothAdapter;
+ import android.bluetooth.BluetoothStatusCodes;
+@@ -90,7 +88,6 @@ import com.android.bluetooth.flags.Flags;
+ import com.android.internal.annotations.GuardedBy;
+ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.modules.expresslog.Counter;
+-import com.android.modules.utils.HandlerExecutor;
+ import com.android.server.BluetoothManagerServiceDumpProto;
+ import com.android.server.bluetooth.airplane.AirplaneModeListener;
+ import com.android.server.bluetooth.satellite.SatelliteModeListener;
+@@ -181,9 +178,6 @@ class BluetoothManagerService {
+     // and Airplane mode will have higher priority.
+     @VisibleForTesting static final int BLUETOOTH_ON_AIRPLANE = 2;
+ 
+-    // Settings.Global.BLUETOOTH_OFF_TIMEOUT
+-    private static final String BLUETOOTH_OFF_TIMEOUT = "bluetooth_off_timeout";
+-
+     private final Context mContext;
+     private final Looper mLooper;
+ 
+@@ -589,9 +583,6 @@ class BluetoothManagerService {
+                                         .sendToTarget();
+                             }
+                         }
+-                    } else if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)
+-                        || BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED.equals(action)) {
+-                        setBluetoothTimeout();
+                     } else if (action.equals(Intent.ACTION_SHUTDOWN)) {
+                         Log.i(TAG, "Device is shutting down.");
+                         mShutdownInProgress = true;
+@@ -613,24 +604,6 @@ class BluetoothManagerService {
+                 }
+             };
+ 
+-    private final OnAlarmListener mBluetoothTimeoutListener = new OnAlarmListener() {
+-        @Override
+-        public void onAlarm() {
+-            try {
+-                // Fetch adapter connection state synchronously and assume disconnected on error
+-                if (mAdapter == null) return;
+-                int adapterConnectionState = mAdapter.getConnectionState();
+-
+-                if (getState() == BluetoothAdapter.STATE_ON
+-                    && adapterConnectionState == BluetoothAdapter.STATE_DISCONNECTED) {
+-                    mAdapter.disable(mContext.getAttributionSource());
+-                }
+-            } catch (RemoteException e) {
+-                Log.e(TAG, "setBluetoothTimeout() failed", e);
+-            }
+-        }
+-    };
+-
+     BluetoothManagerService(@NonNull Context context, @NonNull Looper looper) {
+         mContext = requireNonNull(context, "Context cannot be null");
+         mContentResolver = requireNonNull(mContext.getContentResolver(), "Resolver cannot be null");
+@@ -669,8 +642,6 @@ class BluetoothManagerService {
+         IntentFilter filter = new IntentFilter();
+         filter.addAction(BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED);
+         filter.addAction(BluetoothAdapter.ACTION_BLUETOOTH_ADDRESS_CHANGED);
+-        filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+-        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+         filter.addAction(Intent.ACTION_SETTING_RESTORED);
+         filter.addAction(Intent.ACTION_SHUTDOWN);
+         filter.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY);
+@@ -722,27 +693,6 @@ class BluetoothManagerService {
+                 Counter.logIncrement("bluetooth.value_auto_on_supported");
+             }
+         }
+-
+-        mContentResolver.registerContentObserver(Settings.Global.getUriFor(
+-                BLUETOOTH_OFF_TIMEOUT), false,
+-            new ContentObserver(null) {
+-                @Override
+-                public void onChange(boolean selfChange) {
+-                    setBluetoothTimeout();
+-                }
+-            });
+-    }
+-
+-    private void setBluetoothTimeout() {
+-        long bluetoothTimeoutMillis = Settings.Global.getLong(mContext.getContentResolver(),
+-            BLUETOOTH_OFF_TIMEOUT, 0);
+-        AlarmManager alarmManager = mContext.getSystemService(AlarmManager.class);
+-        alarmManager.cancel(mBluetoothTimeoutListener);
+-        if (bluetoothTimeoutMillis != 0) {
+-            final long timeout = SystemClock.elapsedRealtime() + bluetoothTimeoutMillis;
+-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, timeout,
+-                TAG, new HandlerExecutor(mHandler), null, mBluetoothTimeoutListener);
+-        }
+     }
+ 
+     private Unit onBleScanDisabled() {
+diff --git a/service/tests/Android.bp b/service/tests/Android.bp
+index 903280f..e8a67b8 100644
+--- a/service/tests/Android.bp
++++ b/service/tests/Android.bp
+@@ -52,7 +52,6 @@ android_test {
+         "libdexmakerjvmtiagent",
+         "libstaticjvmtiagent",
+     ],
+-    certificate: "bluetooth",
+ 
+     test_suites: [
+         "general-tests",
+diff --git a/system/gd/hci/controller.cc b/system/gd/hci/controller.cc
+index 09718dc..328babd 100644
+--- a/system/gd/hci/controller.cc
++++ b/system/gd/hci/controller.cc
+@@ -16,7 +16,6 @@
+ 
+ #include "hci/controller.h"
+ 
+-#include <android-base/strings.h>
+ #include <bluetooth/log.h>
+ #include <com_android_bluetooth_flags.h>
+ 
+@@ -46,12 +45,6 @@ constexpr uint8_t kMinEncryptionKeySize = 7;  // #define MIN_ENCRYPTION_KEY_SIZE
+ constexpr bool kDefaultVendorCapabilitiesEnabled = true;
+ static const std::string kPropertyVendorCapabilitiesEnabled =
+     "bluetooth.core.le.vendor_capabilities.enabled";
+-static const char kPropertyDisabledCommands[] =
+-    "bluetooth.hci.disabled_commands";
+-
+-constexpr bool kDefaultErroneousDataReportingEnabled = true;
+-static const std::string kPropertyErroneousDataReportingEnabled =
+-    "bluetooth.hci.erroneous_data_reporting.enabled";
+ 
+ using os::Handler;
+ 
+@@ -215,14 +208,11 @@ struct Controller::impl {
+           handler->BindOnceOn(this, &Controller::impl::le_set_host_feature_handler));
+     }
+ 
+-    if (os::GetSystemPropertyBool(
+-            kPropertyErroneousDataReportingEnabled, kDefaultErroneousDataReportingEnabled)) {
+-        if (is_supported(OpCode::READ_DEFAULT_ERRONEOUS_DATA_REPORTING)) {
+-          hci_->EnqueueCommand(
+-              ReadDefaultErroneousDataReportingBuilder::Create(),
+-              handler->BindOnceOn(
+-                  this, &Controller::impl::read_default_erroneous_data_reporting_handler));
+-        }
++    if (is_supported(OpCode::READ_DEFAULT_ERRONEOUS_DATA_REPORTING)) {
++      hci_->EnqueueCommand(
++          ReadDefaultErroneousDataReportingBuilder::Create(),
++          handler->BindOnceOn(
++              this, &Controller::impl::read_default_erroneous_data_reporting_handler));
+     }
+ 
+     // Skip vendor capabilities check if configured.
+@@ -342,15 +332,6 @@ struct Controller::impl {
+     ErrorCode status = complete_view.GetStatus();
+     log::assert_that(status == ErrorCode::SUCCESS, "Status {}", ErrorCodeText(status));
+     local_supported_commands_ = complete_view.GetSupportedCommands();
+-
+-    if (auto disabledCommands = os::GetSystemProperty(kPropertyDisabledCommands)) {
+-      for (const auto& command : android::base::Split(*disabledCommands, ",")) {
+-        uint16_t index = std::stoi(command);
+-        uint16_t byte_index = index / 10;
+-        uint16_t bit_index = index % 10;
+-        local_supported_commands_[byte_index] &= ~(1 << bit_index);
+-      }
+-    }
+   }
+ 
+   void read_local_extended_features_complete_handler(std::promise<void> promise, CommandCompleteView view) {
+diff --git a/system/gd/hci/hci_layer.cc b/system/gd/hci/hci_layer.cc
+index ab7b8a3..fe5fa33 100644
+--- a/system/gd/hci/hci_layer.cc
++++ b/system/gd/hci/hci_layer.cc
+@@ -230,15 +230,13 @@ struct HciLayer::impl {
+           command_complete_view.IsValid(), "assert failed: command_complete_view.IsValid()");
+       (*command_queue_.front().GetCallback<CommandCompleteView>())(command_complete_view);
+     } else {
+-      if (command_queue_.front().waiting_for_status_ == is_status) {
+-        (*command_queue_.front().GetCallback<TResponse>())(std::move(response_view));
+-      } else {
+-        CommandCompleteView command_complete_view = CommandCompleteView::Create(
+-            EventView::Create(PacketView<kLittleEndian>(
+-                std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>()))));
+-        (*command_queue_.front().GetCallback<CommandCompleteView>())(
+-            std::move(command_complete_view));
+-      }
++      log::assert_that(
++          command_queue_.front().waiting_for_status_ == is_status,
++          "{} was not expecting {} event",
++          OpCodeText(op_code),
++          logging_id);
++
++      (*command_queue_.front().GetCallback<TResponse>())(std::move(response_view));
+     }
+ 
+ #ifdef TARGET_FLOSS
+diff --git a/system/gd/hci/le_scanning_manager.cc b/system/gd/hci/le_scanning_manager.cc
+index 40efd37..922da0e 100644
+--- a/system/gd/hci/le_scanning_manager.cc
++++ b/system/gd/hci/le_scanning_manager.cc
+@@ -60,8 +60,6 @@ constexpr uint8_t kDataStatusBits = 5;
+ 
+ // system properties
+ const std::string kLeRxPathLossCompProperty = "bluetooth.hardware.radio.le_rx_path_loss_comp_db";
+-const std::string kPropertyDisableApcfExtendedFeatures = "bluetooth.le.disable_apcf_extended_features";
+-bool kDisableApcfExtendedFeatures = false;
+ 
+ const ModuleFactory LeScanningManager::Factory = ModuleFactory([]() { return new LeScanningManager(); });
+ 
+@@ -219,9 +217,7 @@ struct LeScanningManager::impl : public LeAddressManagerCallback {
+       api_type_ = ScanApiType::LEGACY;
+     }
+     is_filter_supported_ = controller_->IsSupported(OpCode::LE_ADV_FILTER);
+-    if (os::GetSystemProperty(kPropertyDisableApcfExtendedFeatures) == "1")
+-      kDisableApcfExtendedFeatures = true;
+-    if (is_filter_supported_ && !kDisableApcfExtendedFeatures) {
++    if (is_filter_supported_) {
+       le_scanning_interface_->EnqueueCommand(
+           LeAdvFilterReadExtendedFeaturesBuilder::Create(),
+           module_handler_->BindOnceOn(this, &impl::on_apcf_read_extended_features_complete));
+diff --git a/system/hci/include/hci_layer.h b/system/hci/include/hci_layer.h
+index 429b932..03fcf58 100644
+--- a/system/hci/include/hci_layer.h
++++ b/system/hci/include/hci_layer.h
+@@ -24,8 +24,25 @@
+ #include "stack/include/bt_hdr.h"
+ #include "stack/include/bt_types.h"
+ 
+-#include "hci/include/hci_layer_legacy.h"
++///// LEGACY DEFINITIONS /////
+ 
++/* Message event mask across Host/Controller lib and stack */
++#define MSG_EVT_MASK 0xFF00     /* eq. BT_EVT_MASK */
++#define MSG_SUB_EVT_MASK 0x00FF /* eq. BT_SUB_EVT_MASK */
++
++/* Message event ID passed from Host/Controller lib to stack */
++#define MSG_HC_TO_STACK_HCI_ERR 0x1300      /* eq. BT_EVT_TO_BTU_HCIT_ERR */
++#define MSG_HC_TO_STACK_HCI_ISO 0x1700      /* eq. BT_EVT_TO_BTU_HCI_ISO */
++#define MSG_HC_TO_STACK_HCI_EVT 0x1000      /* eq. BT_EVT_TO_BTU_HCI_EVT */
++
++/* Message event ID passed from stack to vendor lib */
++#define MSG_STACK_TO_HC_HCI_ISO 0x2d00 /* eq. BT_EVT_TO_LM_HCI_ISO */
++#define MSG_STACK_TO_HC_HCI_CMD 0x2000 /* eq. BT_EVT_TO_LM_HCI_CMD */
++
++/* Local Bluetooth Controller ID for BR/EDR */
++#define LOCAL_BR_EDR_CONTROLLER_ID 0
++
++///// END LEGACY DEFINITIONS /////
+ typedef struct packet_fragmenter_t packet_fragmenter_t;
+ typedef uint16_t command_opcode_t;
+ 
+diff --git a/system/stack/a2dp/a2dp_sbc_encoder.cc b/system/stack/a2dp/a2dp_sbc_encoder.cc
+index aa49fc0..20f2384 100644
+--- a/system/stack/a2dp/a2dp_sbc_encoder.cc
++++ b/system/stack/a2dp/a2dp_sbc_encoder.cc
+@@ -497,12 +497,9 @@ static void a2dp_sbc_encode_frames(uint8_t nb_frame) {
+     a2dp_sbc_encoder_cb.stats.media_read_total_expected_packets++;
+ 
+     do {
+-      /* Fill allocated buffer with 0 when residue data is not existing*/
+-      if (a2dp_sbc_encoder_cb.feeding_state.aa_feed_residue == 0) {
+-        memset(a2dp_sbc_encoder_cb.pcmBuffer, 0,
++      /* Fill allocated buffer with 0 */
++      memset(a2dp_sbc_encoder_cb.pcmBuffer, 0,
+              blocm_x_subband * p_encoder_params->s16NumOfChannels);
+-      }
+-
+       //
+       // Read the PCM data and encode it. If necessary, upsample the data.
+       //
