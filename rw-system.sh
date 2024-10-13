@@ -129,7 +129,6 @@ fixSPL() {
             cp -a "$f" "/mnt/phh/$b"
             sed -i \
                 -e 's/ro.build.version.release/ro.keymaster.xxx.release/g' \
-                -e 's/ro.build.version.security_patch/ro.keymaster.xxx.security_patch/g' \
                 -e 's/ro.product.model/ro.keymaster.mod/g' \
                 -e 's/ro.product.brand/ro.keymaster.brn/g' \
                 "/mnt/phh/$b"
@@ -821,22 +820,6 @@ if [ -f /system/phh/secure ] || [ -f /metadata/phh/secure ];then
     resetprop_phh --delete ro.build.selinux
 
     resetprop_phh ro.adb.secure 1
-
-    # Hide system/xbin/su
-    mount /mnt/phh/empty_dir /system/xbin
-    mount /mnt/phh/empty_dir /system/app/me.phh.superuser
-    mount /system/phh/empty /system/xbin/phh-su
-else
-    mkdir /mnt/phh/xbin
-    chmod 0755 /mnt/phh/xbin
-    chcon u:object_r:system_file:s0 /mnt/phh/xbin
-
-    #phh-su will bind over this empty file to make a real su
-    touch /mnt/phh/xbin/su
-    chcon u:object_r:system_file:s0 /mnt/phh/xbin/su
-
-    mount -o bind /mnt/phh/xbin /system/xbin
-fi
 
 for abi in "" 64;do
     f=/vendor/lib$abi/libstagefright_foundation.so
