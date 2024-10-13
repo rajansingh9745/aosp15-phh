@@ -1,0 +1,64 @@
+diff --git a/build/soong/Android.bp b/build/soong/Android.bp
+index 1d0e180..c1b3050 100644
+--- a/build/soong/Android.bp
++++ b/build/soong/Android.bp
+@@ -20,26 +20,6 @@ bootstrap_go_package {
+ derp_generator {
+     name: "generated_kernel_includes",
+ 
+-    // The headers make command
+-    cmd: "$(PATH_OVERRIDE_SOONG) $(KERNEL_MAKE_CMD) $(KERNEL_MAKE_FLAGS) -C $(TARGET_KERNEL_SOURCE) O=$(KERNEL_BUILD_OUT_PREFIX)$(genDir) ARCH=$(KERNEL_ARCH) $(KERNEL_CROSS_COMPILE) headers_install && vendor/derp/tools/clean_headers.sh $(KERNEL_BUILD_OUT_PREFIX)$(genDir)",
+-
+-    // Directories that can be imported by a cc_* module generated_headers property
+-    export_include_dirs: [
+-        "usr/audio/include/uapi",
+-        "usr/include",
+-        "usr/include/audio",
+-        "usr/include/audio/include/uapi",
+-        "usr/techpack/audio/include",
+-    ],
+-
+-    // Sources for dependency tracking
+-    dep_root: "$(TARGET_KERNEL_SOURCE)",
+-    dep_files: [
+-        "Makefile",
+-        "include/**/*",
+-        "arch/$(KERNEL_ARCH)/include/**/*",
+-        "techpack/audio/include/**/*",
+-    ],
+ }
+ 
+ cc_defaults {
+diff --git a/config/common.mk b/config/common.mk
+index 13163de..a3c310a 100644
+--- a/config/common.mk
++++ b/config/common.mk
+@@ -13,16 +13,8 @@ PRODUCT_SYSTEM_PROPERTIES += \
+     ro.com.google.clientidbase=$(PRODUCT_GMS_CLIENTID_BASE)
+ endif
+ 
+-ifeq ($(TARGET_BUILD_VARIANT),eng)
+-# Disable ADB authentication
+-PRODUCT_SYSTEM_PROPERTIES += ro.adb.secure=0
+-else
+-# Enable ADB authentication
+-PRODUCT_SYSTEM_PROPERTIES += ro.adb.secure=1
+-
+ # Disable extra StrictMode features on all non-engineering builds
+ PRODUCT_SYSTEM_PROPERTIES += persist.sys.strictmode.disable=true
+-endif
+ 
+ # Backup Tool
+ ifneq ($(TARGET_EXCLUDE_BACKUPTOOL),true)
+@@ -89,11 +81,6 @@ endif
+ PRODUCT_SYSTEM_PROPERTIES += \
+     ro.control_privapp_permissions?=enforce
+ 
+-# Support many users/work profiles
+-PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
+-    persist.sys.max_profiles=16 \
+-    fw.max_users=32
+-
+ # Include extra packages
+ include vendor/derp/config/packages.mk
+ 
