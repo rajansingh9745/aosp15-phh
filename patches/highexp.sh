@@ -1,91 +1,102 @@
 #!/bin/bash
 
-set +e  # Disable exit on error
+# Define the base directory for patches
+PATCH_BASE_DIR="patches/TrebleDroid"
 
-source="$(readlink -f -- $1)"
-trebledroid="$source/patches/TrebleDroid"
-personal="$source/patches/personal"
+# Define the root of the Android source code as the current directory
+ANDROID_ROOT_DIR="$(pwd)"
 
-# Function to apply patches
-apply_patches() {
-    patch_dir=$1
-    patch_source=$2
-    printf "\n### APPLYING PATCHES FROM: $patch_source ###\n"
-    sleep 1.0
+# Initialize counters
+total_patches=0
+successful_patches=0
+failed_patches=0
+already_applied_patches=0
 
-    for path in $(cd $patch_dir; echo *); do
-        tree="$(tr _ / <<<$path | sed -e 's;platform/;;g')"
-        printf "\n| $path ###\n"
-        [ "$tree" == build ] && tree=build/make
-        [ "$tree" == vendor/hardware/overlay ] && tree=vendor/hardware_overlay
-        [ "$tree" == treble/app ] && tree=treble_app
+# Function to check if a patch has already been applied
+is_patch_applied() {
+  local patch_file="$1"
+  local target_dir="$2"
 
-        pushd $tree > /dev/null
+  # Navigate to the target directory
+  cd "$ANDROID_ROOT_DIR/$target_dir" || { echo "Failed to navigate to $target_dir"; return 1; }
 
-        for patch in $patch_dir/$path/*.patch; do
-            # Extract the file(s) being patched
-            files_changed=$(grep '^diff --git' $patch | awk '{print $3}' | sed 's/a\///')
+  # Perform a dry run of the patch application
+  patch --dry-run -p1 < "$ANDROID_ROOT_DIR/$patch_file" 2>&1 | grep -q "Reversed (or previously applied) patch detected"
 
-            # Check if patch is already applied by verifying the content changes
-            already_applied=true
-            for file in $files_changed; do
-                if ! patch -p1 --dry-run -R < $patch > /dev/null 2>&1; then
-                    already_applied=false
-                    break
-                fi
-            done
+  # Return the exit status of the grep command
+  local status=$?
 
-            if [ "$already_applied" = true ]; then
-                printf "### PATCH ALREADY APPLIED: $patch \n"
-                continue
-            fi
+  # Return to the Android root directory
+  cd "$ANDROID_ROOT_DIR"
 
-            # Try to apply the patch
-            if git apply --check $patch; then
-                git am $patch
-                printf "### PATCH APPLIED SUCCESSFULLY: $patch \n"
-            elif patch -f -p1 --dry-run < $patch > /dev/null; then
-                printf "### TRYING TO APPLY: $patch \n"
-                git am $patch || true
-
-                # Apply patch to the file directly if it failed
-                for file in $files_changed; do
-                    while read -r line; do
-                        # Extract the line from the patch that should be applied
-                        if [[ $line =~ ^\+ ]]; then
-                            new_line="${line:1}"  # Remove the '+' sign
-                            # Search for the existing line in the file
-                            existing_line=$(grep -n "${new_line}" "$file" | cut -d: -f1)
-
-                            # If found, replace the line in the file
-                            if [ -n "$existing_line" ]; then
-                                sed -i "${existing_line}s/.*/${new_line}/" "$file"
-                                printf "### REPLACED LINE IN $file: $existing_line\n"
-                            else
-                                printf "### LINE TO REPLACE NOT FOUND IN $file\n"
-                            fi
-                        fi
-                    done < "$patch"
-                done
-
-                # Finalize the changes
-                git add -u
-                git am --continue
-                printf "### PATCH APPLIED WITH MODIFICATIONS: $patch \n"
-            else
-                printf "### FAILED APPLYING: $patch \n"
-            fi
-        done
-
-        popd > /dev/null
-    done
+  return $status
 }
 
-# Apply TrebleDroid patches
-apply_patches $trebledroid "TrebleDroid"
+# Function to apply a patch
+apply_patch() {
+  local patch_file="$1"
+  local target_dir="$2"
 
-# Apply Personal patches
-apply_patches $personal "Personal"
+  # Check if the patch has already been applied
+  if is_patch_applied "$patch_file" "$target_dir"; then
+    echo "Patch already applied: $patch_file (in $target_dir)"
+    ((already_applied_patches++))
+    return
+  fi
 
-# End of script
-printf "\n### PATCHING PROCESS COMPLETED ###\n"
+  # Navigate to the target directory
+  cd "$ANDROID_ROOT_DIR/$target_dir" || { echo "Failed to navigate to $target_dir"; return 1; }
+
+  # Apply the patch
+  patch -p1 < "$ANDROID_ROOT_DIR/$patch_file"
+
+  # Check if the patch was applied successfully
+  if [ $? -eq 0 ]; then
+    echo "Patch applied successfully: $patch_file (in $target_dir)"
+    ((successful_patches++))
+  else
+    echo "Failed to apply patch: $patch_file (in $target_dir)"
+    ((failed_patches++))
+  fi
+
+  # Return to the Android root directory
+  cd "$ANDROID_ROOT_DIR"
+}
+
+# Function to transform subfolder names
+transform_subfolder_name() {
+  local subfolder="$1"
+
+  # Remove the "platform_" prefix and replace underscores with slashes
+  transformed_subfolder=$(echo "$subfolder" | sed 's/^platform_//' | tr '_' '/')
+
+  echo "$transformed_subfolder"
+}
+
+# Iterate through all patch files in the PATCH_BASE_DIR
+while read -r patch_file; do
+  # Determine the target directory based on the patch file path
+  subfolder=$(dirname "$patch_file" | sed "s|^$PATCH_BASE_DIR/||")
+  target_dir=$(transform_subfolder_name "$subfolder")
+
+  echo "Processing patch file: $patch_file"
+  echo "Target directory: $target_dir"
+
+  # Apply the patch
+  apply_patch "$patch_file" "$target_dir"
+
+  # Increment the total patches counter
+  ((total_patches++))
+done < <(find "$PATCH_BASE_DIR" -type f -name "*.patch")
+
+# Print the summary report
+echo "----------------------------------------"
+echo "Patch Application Summary Report"
+echo "----------------------------------------"
+echo "Total patches processed: $total_patches"
+echo "Patches successfully applied: $successful_patches"
+echo "Patches already applied: $already_applied_patches"
+echo "Patches failed: $failed_patches"
+echo "----------------------------------------"
+
+echo "All patches processed!"
