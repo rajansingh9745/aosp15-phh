@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Define the base directory for patches
-PATCH_BASE_DIR="patches/TrebleDroid"
+# Define the base directories for patches
+PATCH_BASE_DIRS=("patches/TrebleDroid" "patches/personal")
 
 # Define the root of the Android source code as the current directory
 ANDROID_ROOT_DIR="$(pwd)"
@@ -73,21 +73,23 @@ transform_subfolder_name() {
   echo "$transformed_subfolder"
 }
 
-# Iterate through all patch files in the PATCH_BASE_DIR
-while read -r patch_file; do
-  # Determine the target directory based on the patch file path
-  subfolder=$(dirname "$patch_file" | sed "s|^$PATCH_BASE_DIR/||")
-  target_dir=$(transform_subfolder_name "$subfolder")
+# Iterate through all patch files in the PATCH_BASE_DIRS
+for PATCH_BASE_DIR in "${PATCH_BASE_DIRS[@]}"; do
+  while read -r patch_file; do
+    # Determine the target directory based on the patch file path
+    subfolder=$(dirname "$patch_file" | sed "s|^$PATCH_BASE_DIR/||")
+    target_dir=$(transform_subfolder_name "$subfolder")
 
-  echo "Processing patch file: $patch_file"
-  echo "Target directory: $target_dir"
+    echo "Processing patch file: $patch_file"
+    echo "Target directory: $target_dir"
 
-  # Apply the patch
-  apply_patch "$patch_file" "$target_dir"
+    # Apply the patch
+    apply_patch "$patch_file" "$target_dir"
 
-  # Increment the total patches counter
-  ((total_patches++))
-done < <(find "$PATCH_BASE_DIR" -type f -name "*.patch")
+    # Increment the total patches counter
+    ((total_patches++))
+  done < <(find "$PATCH_BASE_DIR" -type f -name "*.patch")
+done
 
 # Print the summary report
 echo "----------------------------------------"
