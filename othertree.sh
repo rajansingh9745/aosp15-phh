@@ -17,6 +17,6 @@ echo "Cloning AndyCGYan/android_packages_apps_QcRilAm..."
 git clone https://github.com/AndyCGYan/android_packages_apps_QcRilAm -b master packages/apps/QcRilAm
 
 echo "Cloning platform/prebuilts/vndk/v28..."
-git clone https://android.googlesource.com/platform/prebuilts/vndk/v28 --depth=1 prebuilts/vndk/v28
+git clone https://github.com/rajansingh9745/prebuilts_vndk_v28-modified --depth=1 prebuilts/vndk/v28
 
 echo "All repositories cloned successfully."
