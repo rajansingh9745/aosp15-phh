@@ -1,11 +1,12 @@
-TARGET_GAPPS_ARCH := arm64
-include build/make/target/product/aosp_arm64.mk
+TARGET_GAPPS_ARCH := arm
+include build/make/target/product/aosp_arm.mk
 $(call inherit-product, device/phh/treble/base.mk)
 
-$(call inherit-product, device/phh/treble/derp.mk)
+$(call inherit-product, vendor/gapps/arm64/arm64-vendor.mk)
+$(call inherit-product, device/phh/treble/derp.mk.mk)
 
-PRODUCT_NAME := treble_arm64_bgN
-PRODUCT_DEVICE := tdgsi_arm64_ab
+PRODUCT_NAME := treble_arm_bgN
+PRODUCT_DEVICE := tdgsi_arm_ab
 PRODUCT_BRAND := google
 PRODUCT_SYSTEM_BRAND := google
 PRODUCT_MODEL := TrebleDroid with GApps

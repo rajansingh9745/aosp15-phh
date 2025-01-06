@@ -1,5 +1,5 @@
 diff --git a/build/soong/Android.bp b/build/soong/Android.bp
-index c468178..1583017 100644
+index 9cc9118..816a999 100644
 --- a/build/soong/Android.bp
 +++ b/build/soong/Android.bp
 @@ -19,27 +19,6 @@ bootstrap_go_package {
@@ -51,3 +51,15 @@ index fd12ed2..df0eda7 100644
  
  # Backup Tool
  PRODUCT_COPY_FILES += \
+diff --git a/config/version.mk b/config/version.mk
+index fa096cd..3a63ccc 100644
+--- a/config/version.mk
++++ b/config/version.mk
+@@ -17,7 +17,6 @@ PIXELAGE_VERSION := ProjectPixelage-v$(PIXELAGE_DISPLAY_VERSION)-$(PIXELAGE_BUIL
+ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
+     ro.pixelage.build.date=$(BUILD_DATE) \
+     ro.pixelage.build.version=$(PIXELAGE_DISPLAY_VERSION) \
+-    ro.pixelage.device=$(PIXELAGE_BUILD) \
+     ro.pixelage.fingerprint=$(ROM_FINGERPRINT) \
+     ro.pixelage.releasetype=$(PIXELAGE_BUILDTYPE) \
+     ro.pixelage.version=$(PIXELAGE_VERSION) \
