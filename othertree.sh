@@ -5,7 +5,7 @@ echo "Cloning TrebleDroid/vendor_hardware_overlay..."
 git clone https://github.com/TrebleDroid/vendor_hardware_overlay -b pie vendor/hardware_overlay
 
 echo "Cloning TrebleDroid/vendor_interfaces..."
-git clone https://github.com/TrebleDroid/vendor_interfaces -b android-14.0 vendor/interfaces
+git clone https://github.com/rajansingh9745/vendor_interfaces.git -b android-15.0 vendor/interfaces
 
 echo "Cloning TrebleDroid/treble_app..."
 git clone https://github.com/rajansingh9745/treble_app -b master treble_app
