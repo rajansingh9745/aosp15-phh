@@ -11,7 +11,7 @@ echo "Cloning TrebleDroid/treble_app..."
 git clone https://github.com/rajansingh9745/treble_app -b master treble_app
 
 echo "Cloning phhusson/vendor_magisk..."
-git clone https://github.com/phhusson/vendor_magisk -b android-10.0 vendor/magisk
+git clone https://github.com/rajansingh9745/vendor_magisk.git -b android-10.0 vendor/magisk
 
 echo "Cloning AndyCGYan/android_packages_apps_QcRilAm..."
 git clone https://github.com/AndyCGYan/android_packages_apps_QcRilAm -b master packages/apps/QcRilAm
