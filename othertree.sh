@@ -2,7 +2,7 @@
 
 # Clone each repository
 echo "Cloning TrebleDroid/vendor_hardware_overlay..."
-git clone https://github.com/TrebleDroid/vendor_hardware_overlay -b pie vendor/hardware_overlay
+git clone https://github.com/rajansingh9745/vendor_hardware_overlay.git -b pie vendor/hardware_overlay
 
 echo "Cloning TrebleDroid/vendor_interfaces..."
 git clone https://github.com/rajansingh9745/vendor_interfaces.git -b android-15.0 vendor/interfaces
