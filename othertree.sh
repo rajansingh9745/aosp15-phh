@@ -8,7 +8,7 @@ echo "Cloning TrebleDroid/vendor_interfaces..."
 git clone https://github.com/TrebleDroid/vendor_interfaces -b android-14.0 vendor/interfaces
 
 echo "Cloning TrebleDroid/treble_app..."
-git clone https://github.com/TrebleDroid/treble_app -b master treble_app
+git clone https://github.com/rajansingh9745/treble_app -b master treble_app
 
 echo "Cloning phhusson/vendor_magisk..."
 git clone https://github.com/phhusson/vendor_magisk -b android-10.0 vendor/magisk
