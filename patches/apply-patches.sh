@@ -48,7 +48,7 @@ apply_patch() {
   cd "$ANDROID_ROOT_DIR/$target_dir" || { echo "Failed to navigate to $target_dir"; return 1; }
 
   # Apply the patch
-  patch -p1 < "$ANDROID_ROOT_DIR/$patch_file"
+  patch -p1 --no-backup-if-mismatch < "$ANDROID_ROOT_DIR/$patch_file"
 
   # Check if the patch was applied successfully
   if [ $? -eq 0 ]; then
