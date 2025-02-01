@@ -21,7 +21,7 @@ is_patch_applied() {
   cd "$ANDROID_ROOT_DIR/$target_dir" || { echo "Failed to navigate to $target_dir"; return 1; }
 
   # Perform a dry run of the patch application
-  patch --dry-run -p1 --no-backup < "$ANDROID_ROOT_DIR/$patch_file" 2>&1 | grep -q "Reversed (or previously applied) patch detected"
+  patch --dry-run -p1 < "$ANDROID_ROOT_DIR/$patch_file" 2>&1 | grep -q "Reversed (or previously applied) patch detected"
 
   # Return the exit status of the grep command
   local status=$?
@@ -48,7 +48,7 @@ apply_patch() {
   cd "$ANDROID_ROOT_DIR/$target_dir" || { echo "Failed to navigate to $target_dir"; return 1; }
 
   # Apply the patch
-  patch -p1 < "$ANDROID_ROOT_DIR/$patch_file"
+  patch -p1 --no-backup < "$ANDROID_ROOT_DIR/$patch_file"
 
   # Check if the patch was applied successfully
   if [ $? -eq 0 ]; then
