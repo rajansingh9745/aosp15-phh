@@ -9,7 +9,7 @@ TARGET_NO_KERNEL_IMAGE := true
 TARGET_SUPPORT_BLUR := true
 SELINUX_IGNORE_NEVERALLOWS := true
 
- OTA
+# OTA
  PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.system.ota.json_url=https://raw.githubusercontent.com/rajansingh9745/infinity-x/15/ota.json
 
