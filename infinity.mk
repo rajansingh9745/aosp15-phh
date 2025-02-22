@@ -1,7 +1,7 @@
 $(call inherit-product, vendor/infinity/config/common.mk)
 $(call inherit-product, vendor/infinity/config/common_mobile_full.mk)
 $(call inherit-product, vendor/infinity/config/BoardConfigSoong.mk)
-$(call inherit-product, vendor/infinity/config/BoardConfigLineage.mk)
+$(call inherit-product, vendor/infinity/config/BoardConfigInfinity.mk)
 $(call inherit-product, device/lineage/sepolicy/common/sepolicy.mk)
 -include vendor/infinity/build/core/config.mk
 TARGET_NO_KERNEL_OVERRIDE := true
