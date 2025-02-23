@@ -14,8 +14,8 @@ TARGET_HAS_FUSEBLK_SEPOLICY_ON_VENDOR := true
 TARGET_BOOT_ANIMATION_RES := 1080
 
 TARGET_FACE_UNLOCK_SUPPORTED := true
-TARGET_NOT_USES_BLUR := true
 EXTRA_UDFPS_ANIMATIONS := true
+TARGET_SUPPORT_BLUR := true
 
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.system.ota.json_url=https://raw.githubusercontent.com/rajansingh9745/treble_DerpFest_GSI/14/ota.json
