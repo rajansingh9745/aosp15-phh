@@ -6,11 +6,12 @@ PATCH_BASE_DIRS=("patches/TrebleDroid" "patches/personal")
 # Define the root of the Android source code as the current directory
 ANDROID_ROOT_DIR="$(pwd)"
 
-# Initialize counters
+# Initialize counters and array for failed patches
 total_patches=0
 successful_patches=0
 failed_patches=0
 already_applied_patches=0
+declare -a failed_patch_list
 
 # Function to check if a patch has already been applied
 is_patch_applied() {
@@ -57,6 +58,7 @@ apply_patch() {
   else
     echo "Failed to apply patch: $patch_file (in $target_dir)"
     ((failed_patches++))
+    failed_patch_list+=("$patch_file (in $target_dir)")
   fi
 
   # Return to the Android root directory
@@ -99,6 +101,14 @@ echo "Total patches processed: $total_patches"
 echo "Patches successfully applied: $successful_patches"
 echo "Patches already applied: $already_applied_patches"
 echo "Patches failed: $failed_patches"
+if [ $failed_patches -gt 0 ]; then
+  echo "Failed patches:"
+  for failed_patch in "${failed_patch_list[@]}"; do
+    echo "  - $failed_patch"
+  done
+else
+  echo "No patches failed."
+fi
 echo "----------------------------------------"
 
 echo "All patches processed!"
