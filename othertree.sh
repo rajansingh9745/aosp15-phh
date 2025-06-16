@@ -19,4 +19,7 @@ git clone https://github.com/rajansingh9745/android_packages_apps_QcRilAm -b mas
 echo "Cloning platform/prebuilts/vndk/v28..."
 git clone https://github.com/rajansingh9745/prebuilts_vndk_v28-modified --depth=1 prebuilts/vndk/v28
 
+echo "Cloning platform/prebuilts/vndk/v29..."
+git clone https://android.googlesource.com/platform/prebuilts/vndk/v29 --depth=1 prebuilts/vndk/v29
+
 echo "All repositories cloned successfully."
